@@ -1,0 +1,27 @@
+$ConnectionString = "Driver={SQL Server};Server=.;Database=northwind;Uid=mytest;Pwd=mytest.;"
+$Connection = New-Object System.Data.Odbc.OdbcConnection($ConnectionString)
+$Connection.Open()
+$per=3
+for($i=1;$i-lt 3;$i++){
+     $start=($i-1)*$per
+     $end=($i-1)*$per+$per
+
+     $Query = 
+        "SELECT *
+        FROM (
+            SELECT ROW_NUMBER() OVER (ORDER BY orderid) AS row_number, *
+            FROM orders
+        ) AS subquery
+        WHERE row_number > " + $start + " AND row_number <= " + $end
+    Write-Output $Query
+    $Command = New-Object System.Data.Odbc.OdbcCommand($Query,$Connection)
+    $DataAdapter = New-Object System.Data.Odbc.OdbcDataAdapter($Command)
+    $DataSet = New-Object System.Data.DataSet
+    $DataAdapter.Fill($DataSet)
+    $CsvPath = "L:\testdata" + $i + ".csv"
+    $DataSet.Tables[0] | Export-Csv -Path $CsvPath -NoTypeInformation
+    Invoke-Item $CsvPath
+}
+$Connection.Close()
+
+
