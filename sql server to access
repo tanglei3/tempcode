@@ -1,0 +1,35 @@
+# SQL Server 连接字符串
+$SqlConnectionString = "Server=<ServerName>;Database=<DatabaseName>;Integrated Security=True"
+
+# Access 连接字符串
+$AccessConnectionString = "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=<AccessFilePath>;Persist Security Info=False;"
+
+# SQL 查询语句
+$SqlQuery = "SELECT * FROM <TableName>"
+
+# Access 数据库表名
+$AccessTableName = "<TableName>"
+
+# 执行 SQL 查询
+$SqlConnection = New-Object System.Data.SqlClient.SqlConnection($SqlConnectionString)
+$sqlCommand = New-Object System.Data.SqlClient.SqlCommand
+$sqlCommand.Connection = $SqlConnection
+$sqlCommand.CommandText = $SqlQuery
+$SqlAdapter = New-Object System.Data.SqlClient.SqlDataAdapter($sqlCommand)
+$DataSet = New-Object System.Data.DataSet
+$SqlAdapter.Fill($DataSet)
+
+# 追加到 Access 数据库表
+$OleDbConnection = New-Object System.Data.OleDb.OleDbConnection($AccessConnectionString)
+$OleDbCommand = New-Object System.Data.OleDb.OleDbCommand("SELECT * FROM $AccessTableName", $OleDbConnection)
+$AccessAdapter = New-Object System.Data.OleDb.OleDbDataAdapter($OleDbCommand)
+$AccessCommandBuilder = New-Object System.Data.OleDb.OleDbCommandBuilder($AccessAdapter)
+$AccessAdapter.InsertCommand = $AccessCommandBuilder.GetInsertCommand()
+
+$AccessDataTable = $DataSet.Tables[0]
+$AccessDataTable.TableName = $AccessTableName
+$AccessAdapter.Update($AccessDataTable)
+
+# 关闭数据库连接
+$SqlConnection.Close()
+$OleDbConnection.Close()
