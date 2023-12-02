@@ -1,57 +1,66 @@
-# 导入必要的库
 import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
+import re
 
-# 读取包含公司名称和地址的表格
+# 定义数据
 data = {
     "english_name": ["Microsoft Corporation", "Apple Inc.", "Amazon.com, Inc."],
     "english_address": ["One Microsoft Way, Redmond, WA 98052, USA", "1 Apple Park Way, Cupertino, CA 95014, USA", "410 Terry Ave N, Seattle, WA 98109, USA"],
     "chinese_name": ["微软公司", "苹果公司", "亚马逊公司"]
 }
-df=pd.DataFrame(data)
+df = pd.DataFrame(data)
 
-# 提取英文名称和地址的列
-english_names = df["english_name"]
-english_addresses = df["english_address"]
-
-# 提取中文名称的列
-chinese_names = df["chinese_name"]
-
-# 定义一个函数，将英文名称和地址拼接成一个字符串
+# 通过函数合并英文名称和地址
 def combine_name_address(name, address):
-    return name + " " + address
+    name_without_punctuation = re.sub(r'[^\w\s]', ' ', name)
+    address_without_punctuation = re.sub(r'[^\w\s]', ' ', address)
+    combined_text = name_without_punctuation + " " + address_without_punctuation
+    combined_text = re.sub(r'\s+', ' ', combined_text)  # Remove extra spaces
+    return combined_text.strip()
 
-# 对英文名称和地址进行拼接
-english_combined = [combine_name_address(name, address) for name, address in zip(english_names, english_addresses)]
+df["english_combined"] = df.apply(lambda row: combine_name_address(row["english_name"], row["english_address"]), axis=1)
+
 # 使用TfidfVectorizer将英文名称和地址转换为向量
-vectorizer = TfidfVectorizer()
-english_vectors = vectorizer.fit_transform(english_combined)
+def custom_tokenizer(text):
+    words = text.split()
 
-# 定义一个函数，根据给定的英文名称和地址，返回最匹配的中文名称、匹配度数据以及匹配的英文公司名称和地址
+    # 对包含数字的单词分配更高的权重
+    return [word if not any(char.isdigit() for char in word) else word * 2 for word in words]
+
+vectorizer = TfidfVectorizer(tokenizer=custom_tokenizer)
+english_vectors = vectorizer.fit_transform(df["english_combined"])
+
 def match_chinese_name(english_name, english_address):
     # 将给定的英文名称和地址拼接成一个字符串
     english_query = combine_name_address(english_name, english_address)
 
-    
     query_vector = vectorizer.transform([english_query])
-    
+
     # 计算英文名称和地址与中文名称之间的余弦相似度
     similarities = cosine_similarity(query_vector, english_vectors)
-    
-    # 返回最匹配的中文名称、匹配度数据以及匹配的英文公司名称和地址
+
+    # 找到最相似条目的索引
     index = similarities.argmax()
-    chinese_name = chinese_names[index]
+
+    # 处理找不到匹配项的情况
+    if similarities[0][index] == 0:
+        return "未找到匹配", 0, "", ""
+
+    # 获取匹配信息
+    chinese_name = df.loc[index, "chinese_name"]
     similarity = similarities[0][index]
-    english_name = english_names[index]
-    english_address = english_addresses[index]
-    return chinese_name, similarity, english_name, english_address
+    matched_english_name = df.loc[index, "english_name"]
+    matched_english_address = df.loc[index, "english_address"]
+
+    return chinese_name, similarity, matched_english_name, matched_english_address
 
 # 测试函数
-english_name = "Apple Inc"
-english_address = "1  e"
-chinese_name, similarity, english_name, english_address = match_chinese_name(english_name, english_address)
-print("匹配的中文公司名称：", chinese_name)
-print("匹配度数据：", similarity)
-print("匹配的英文公司名称：", english_name)
-print("匹配的英文公司地址：", english_address)
+english_name = "Microsoft"
+english_address = "Way"
+chinese_name, similarity, matched_english_name, matched_english_address = match_chinese_name(english_name, english_address)
+
+print("匹配的中文公司名称:", chinese_name)
+print("相似度得分:", similarity)
+print("匹配的英文公司名称:", matched_english_name)
+print("匹配的英文公司地址:", matched_english_address)
