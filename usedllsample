@@ -1,0 +1,36 @@
+
+Declare PtrSafe Function LoadLibrary Lib "kernel32" Alias "LoadLibraryA" (ByVal lpLibFileName As String) As LongPtr
+Declare PtrSafe Function FreeLibrary Lib "kernel32" (ByVal hModule As LongPtr) As Long
+Declare PtrSafe Function GetProcAddress Lib "kernel32" (ByVal hModule As LongPtr, ByVal lpProcName As String) As LongPtr
+
+
+Private Const DllPath As String = "C:\Users\111\Desktop\install\AutoItX\AutoItX3_x64.dll"
+
+Declare PtrSafe Function AU3_MouseMove Lib "C:\Users\111\Desktop\install\AutoItX\AutoItX3_x64.dll" (ByVal nX As Long, ByVal nY As Long, ByVal nSpeed As Long) As Long
+
+
+' DLL 模块句柄
+Private DllModule As LongPtr
+
+' 进行初始化，加载 DLL
+Public Sub InitializeDll()
+    DllModule = LoadLibrary(DllPath)
+    If DllModule = 0 Then
+        MsgBox "无法加载 DLL。"
+    End If
+End Sub
+Public Sub UnloadDLL()
+    ' 释放 DLL
+    If hLib <> 0 Then
+        FreeLibrary DllModule
+        hLib = 0
+    End If
+End Sub
+
+Sub start()
+
+InitializeDll
+AU3_MouseMove 0, 0, 1
+UnloadDLL
+
+End Sub
