@@ -1,3 +1,70 @@
+
+import pandas as pd
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+import re
+
+# 定义数据
+data = {
+    "english_name": ["Microsoft Corporation", "Apple Inc.", "Amazon.com, Inc."],
+    "chinese_name": ["微软公司", "苹果公司", "亚马逊公司"]
+}
+df = pd.DataFrame(data)
+
+# 通过函数合并英文名称
+def combine_name(name):
+    # name_without_punctuation = re.sub(r'[^\w]', ' ', name)
+    # combined_text = name_without_punctuation
+    # combined_text = re.sub(r'\s+', ' ', combined_text)  # Remove extra spaces
+    # print('='+combined_text.strip()+"=")
+    return name
+
+df["english_combined"] = df["english_name"].apply(combine_name)
+
+# 使用TfidfVectorizer将英文名称转换为向量
+vectorizer = TfidfVectorizer()
+english_vectors = vectorizer.fit_transform(df["english_combined"])
+
+def match_chinese_name(english_name):
+    # 将给定的英文名称转换为向量
+    query_vector = vectorizer.transform([combine_name(english_name)])
+
+    # 计算英文名称与中文名称之间的余弦相似度
+    similarities = cosine_similarity(query_vector, english_vectors)
+
+    # 找到最相似条目的索引
+    index = similarities.argmax()
+
+    # 处理找不到匹配项的情况
+    if similarities[0][index] == 0:
+        return "未找到匹配", 0, ""
+
+    # 获取匹配信息
+    chinese_name = df.loc[index, "chinese_name"]
+    similarity = similarities[0][index]
+    matched_english_name = df.loc[index, "english_name"]
+
+    return chinese_name, similarity, matched_english_name
+
+# 测试函数
+english_name = "Microsoft abc Corporation 1 1 a Apple Inc."
+chinese_name, similarity, matched_english_name = match_chinese_name(english_name)
+
+print("匹配的中文公司名称:", chinese_name)
+print("相似度得分:", similarity)
+print("匹配的英文公司名称:", matched_english_name)
+
+
+
+
+
+
+
+
+
+
+
+
 import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
