@@ -1,0 +1,27 @@
+Local $json_data = '{"from":"en","to":"zh","trans_result":[{"src":"hello","dst":"你好 我"}]}'
+
+; 将 Unicode 编码转换为汉字
+$json_data = _DecodeUnicodeEscape($json_data)
+
+;~ ConsoleWrite($json_data)
+msgbox(0,0,StringRegExp($json_data, '"dst":"(.*?)"', 3)[0])
+Func _DecodeUnicodeEscape($sData)
+    Local $sResult = ""
+    Local $iIndex = 1
+
+    While $iIndex <= StringLen($sData)
+        Local $iChar = AscW(StringMid($sData, $iIndex, 1))
+        If $iChar = 92 And StringMid($sData, $iIndex + 1, 1) = "u" Then
+            ; 是 Unicode 编码，解码并添加到结果字符串中
+            Local $sUnicode = "0x" & StringMid($sData, $iIndex + 2, 4)
+            $sResult &= ChrW($sUnicode)
+            $iIndex += 6
+        Else
+            ; 非 Unicode 编码，直接添加到结果字符串中
+            $sResult &= StringMid($sData, $iIndex, 1)
+            $iIndex += 1
+        EndIf
+    WEnd
+
+    Return $sResult
+EndFunc
