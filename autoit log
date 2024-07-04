@@ -1,0 +1,7 @@
+uia automation tools:
+1.simplespy:
+https://www.autoitscript.com/forum/topic/153520-iuiautomation-ms-framework-automate-chrome-ff-ie/#comment-1105530
+2.uiaspy:
+UIASpy.7z            https://www.autoitscript.com/forum/topic/196833-uiaspy-ui-automation-spy-tool/
+UIAIncludes.7z       https://www.autoitscript.com/forum/topic/201683-ui-automation-udfs/#comment-1447216
+生成代码需要替换$dtag_IUIAutomation为$dtagIUIAutomation
