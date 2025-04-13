@@ -19,11 +19,43 @@ chrome.exe --remote-debugging-port=9222 --remote-debugging-address=127.0.0.1 --r
 #监控页面控件变化，自己写
 import asyncio
 import json
+import requests
 import websockets
 
 ws_url = "ws://127.0.0.1:9222/devtools/page/B2F540342ED4F19B54F0CC1F9755CB83"
 
+
+def get_websocket_debugger_url(url_keyword=None, title_keyword=None):
+    """
+    访问 http://127.0.0.1:9222/json/list，返回匹配页面的 websocketDebuggerUrl。
+    支持根据 URL 和标题进行关键词匹配。
+    :param url_keyword: 页面 URL 片段关键词
+    :param title_keyword: 页面标题片段关键词
+    :return: 返回匹配页面的 webSocketDebuggerUrl
+    """
+    resp = requests.get("http://127.0.0.1:9222/json/list")
+    pages = resp.json()
+
+    for page in pages:
+        # 根据 URL 关键字匹配
+        if url_keyword and url_keyword not in page.get("url", ""):
+            continue
+
+        # 根据标题关键字匹配
+        if title_keyword and title_keyword not in page.get("title", ""):
+            continue
+
+        return page["webSocketDebuggerUrl"]
+
+    return None
+
+
 async def listen():
+    ws_url=get_websocket_debugger_url(title_keyword="HS8546V5")
+    if not ws_url:
+        print("没有找到匹配的页面")
+        return
+
     websocket = await websockets.connect(ws_url)
     msg_id = 0
 
@@ -88,4 +120,6 @@ async def listen():
             elif name == "mynotifyClick":
                 print(f"[按钮点击事件] {payload}")
 
+
 asyncio.run(listen())
+
