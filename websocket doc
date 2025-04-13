@@ -14,3 +14,78 @@
 
 
 chrome.exe --remote-debugging-port=9222 --remote-debugging-address=127.0.0.1 --remote-allow-origins=http://127.0.0.1
+
+
+#监控页面控件变化，自己写
+import asyncio
+import json
+import websockets
+
+ws_url = "ws://127.0.0.1:9222/devtools/page/B2F540342ED4F19B54F0CC1F9755CB83"
+
+async def listen():
+    websocket = await websockets.connect(ws_url)
+    msg_id = 0
+
+    def next_id():
+        nonlocal msg_id
+        msg_id += 1
+        return msg_id
+
+    async def send(method, params=None):
+        req = {
+            "id": next_id(),
+            "method": method
+        }
+        if params:
+            req["params"] = params
+        await websocket.send(json.dumps(req))
+
+    # 开启 Page 和 Runtime
+    await send("Page.enable")
+    await send("Runtime.enable")
+
+    # 添加绑定函数（客户端可收到通知）
+    await send("Runtime.addBinding", {"name": "mynotifyInputChange"})
+    await send("Runtime.addBinding", {"name": "mynotifyClick"})
+
+    # 注入监听脚本（会在页面加载前自动注入）
+    js_code = """
+    (() => {
+        window.addEventListener('DOMContentLoaded', () => {
+            const input = document.getElementById('txt_Username');
+            if (input) {
+                input.addEventListener('change', () => {
+                    window.mynotifyInputChange(input.value);
+                });
+            }
+
+            const btn = document.getElementById('btnSubmit');
+            if (btn) {
+                btn.addEventListener('click', () => {
+                    window.mynotifyClick("button clicked");
+                });
+            }
+        });
+    })();
+    """
+
+    await send("Page.addScriptToEvaluateOnNewDocument", {
+        "source": js_code
+    })
+
+    print("已注入监听脚本，等待 input 内容变化...")
+
+    # 持续监听事件
+    async for message in websocket:
+        data = json.loads(message)
+        print(data)
+        if data.get("method") == "Runtime.bindingCalled":
+            name = data["params"]["name"]
+            payload = data["params"]["payload"]
+            if name == "mynotifyInputChange":
+                print(f"[输入内容变化] {payload}")
+            elif name == "mynotifyClick":
+                print(f"[按钮点击事件] {payload}")
+
+asyncio.run(listen())
