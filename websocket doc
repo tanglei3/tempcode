@@ -1,1 +1,16 @@
+{
+  "method": "Runtime.evaluate",
+  "params": {
+    "expression": `
+      fetch('http://你的地址/api', {
+        method: 'GET',
+        credentials: 'include'  // ✅ 关键！这会自动带上当前页面的 Cookie
+      }).then(r => r.text())
+    `,
+    "awaitPromise": true,       // ✅ 等待异步 fetch 返回结果
+    "returnByValue": true       // ✅ 把结果值直接放到 response.result.result.value 中
+  }
+}
 
+
+chrome.exe --remote-debugging-port=9222 --remote-debugging-address=127.0.0.1 --remote-allow-origins=http://127.0.0.1
