@@ -1,0 +1,71 @@
+Sub CountMAWBConditions()
+    Dim ws As Worksheet
+    Set ws = ThisWorkbook.Sheets("Sheet1") ' 原始数据表
+
+    Dim lastRow As Long
+    lastRow = ws.Cells(ws.Rows.Count, "A").End(xlUp).Row
+
+    Dim dict As Object
+    Set dict = CreateObject("Scripting.Dictionary")
+
+    Dim i As Long
+    For i = 2 To lastRow
+        Dim mawb As String
+        mawb = ws.Cells(i, 1).Value
+
+        Dim hawb As String
+        hawb = ws.Cells(i, 2).Value
+
+        Dim title As String
+        title = ws.Cells(i, 3).Value
+
+        If Not dict.exists(mawb) Then
+            ' 存储结构: Array(InvoiceCount, HWBCount, PackingCount)
+            dict.Add mawb, Array(0, 0, 0)
+        End If
+
+        Dim counts: counts = dict(mawb)
+
+        ' 条件1: title 含有 Invoice
+        If InStr(1, title, "Invoice", vbTextCompare) > 0 Then
+            counts(0) = counts(0) + 1
+        End If
+
+        ' 条件2: hawb 以 HWB 开头
+        If Left(hawb, 3) = "HWB" Then
+            counts(1) = counts(1) + 1
+        End If
+
+        ' 条件3: title 含有 Packing
+        If InStr(1, title, "Packing", vbTextCompare) > 0 Then
+            counts(2) = counts(2) + 1
+        End If
+
+        dict(mawb) = counts
+    Next i
+
+    ' 输出结果到 Sheet2
+    Dim wsOut As Worksheet
+    On Error Resume Next
+    Set wsOut = ThisWorkbook.Sheets("Sheet2")
+    If wsOut Is Nothing Then
+        Set wsOut = ThisWorkbook.Sheets.Add
+        wsOut.Name = "Sheet2"
+    End If
+    On Error GoTo 0
+
+    wsOut.Cells.Clear
+    wsOut.Range("A1:D1").Value = Array("mawb", "Invoice数量", "HWB开头数量", "Packing数量")
+
+    Dim rowIndex As Long: rowIndex = 2
+    Dim key As Variant
+    For Each key In dict.keys
+        wsOut.Cells(rowIndex, 1).Value = key
+        wsOut.Cells(rowIndex, 2).Value = dict(key)(0)
+        wsOut.Cells(rowIndex, 3).Value = dict(key)(1)
+        wsOut.Cells(rowIndex, 4).Value = dict(key)(2)
+        rowIndex = rowIndex + 1
+    Next key
+
+    MsgBox "统计完成，结果已输出到 Sheet2", vbInformation
+End Sub
